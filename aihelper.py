@@ -64,6 +64,10 @@ def TOwner(terr):
     return terr.player
 
 def TArmies(terr):
+    """
+
+    :type terr: RiskTerritory
+    """
     if terr:
         return terr.armies
     else: 
@@ -113,7 +117,7 @@ def COwner(con):
     try:
         firstowner = continentterrs[0].player
     except:
-        print continentterrs, con,riskengine.territories['India'].continent
+        print (continentterrs, con,riskengine.territories['India'].continent)
         raise
     for x in continentterrs:
         if x.player != firstowner:

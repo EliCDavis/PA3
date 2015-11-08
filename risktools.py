@@ -24,7 +24,7 @@ class RiskBoard():
         - What pictures are on the cards 
         - What the set of all cards is
     """
-    def __init__(self):
+    def  __init__(self):
         """
         Initialize a Risk Board.
         All of the variables are initially empty.  
@@ -407,10 +407,14 @@ def incrementPlayer(state):
         state.current_player = 0
     
 class RiskState():
-    """Stores all the information about a state of a Risk game"""
+    """Stores all the information about a state of a Risk game
+    """
     
     def __init__(self, players, armies, owners, current_player, turn_type, turn_in_number, last_attacker, last_defender, cards, board):
-        """Initializes a RiskState object"""
+        """Initializes a RiskState object
+
+        :type board:RiskBoard
+        """
     
         # An array of RiskPlayer objects (the players in the game)
         self.players = players

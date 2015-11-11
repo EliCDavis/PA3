@@ -116,18 +116,123 @@ def evalTerritory(state, territoryID):
 
     return tAppeal
 
-
-
-
 def isOurTerritory(state, territory):
-    ourID = state.current_player
+    """
+    Determines whether or not the territory passed in belongs to our AI given the current state of things
 
-    if state.owners[territory.id] == ourID:
+    :param state: RiskState
+    :param territory: RiskTerritory
+    :return: boolean
+    """
+    our_id = state.current_player
+
+    if state.owners[territory.id] == our_id:
         return True
     return False
+
+
+def grab_chokeholds(state):
+
+    """
+    A choke hold is defined as a friendly territory on the outskirts of a region that touches an enemy territory that
+    no other territory of that region touches.
+
+    These are essential for reinforcement to prevent region from being broken into.
+
+    :param state: RiskState
+    :return: RiskTerritory[]
+    """
+
+    chokeholds = []
+
+    # after writing grab_regions and grab_region I thought of a simpler better way...
+
+     # Go through all territories on board
+    for territory in state.board.territories:
+
+        # If this terriroty is an enemy territory.
+        if isOurTerritory(state, territory) == False:
+
+            our_territories_it_touches = []
+
+            for neighbor in territory.neighbors:
+
+                if isOurTerritory(state, state.board.territories[neighbor] ):
+
+                    our_territories_it_touches.append( state.board.territories[neighbor] )
+
+            if len(our_territories_it_touches) == 1:
+                chokeholds += our_territories_it_touches
+
+    return set(chokeholds)
+
+
+
+def grab_regions(state):
+
+    """
+    Goes through and finds clusters of territories.
+
+    :param state: RiskState
+    :return: RiskTerritory[][]
+    """
+
+    # An Array of RiskTerritory[] to represent different regions
+    regions = []
+
+    # Go through all territories on board and build regions from them
+    for territory in state.board.territories:
+
+        # If this terriroty is ours lets try creating a region out of it
+        if isOurTerritory(state, territory):
+
+            contained_in_another_region = False
+
+            # Go through all our regions and make sure it doesn't already exist in there.
+            for region in regions:
+
+                for t in region:
+
+                    if t.id == territory.id:
+                        contained_in_another_region = True
+
+            # Territory is not already in another region, we can create a new region!
+            if contained_in_another_region == False:
+
+                regions.append(grab_region)
+
+    return regions
+
+
+def grab_region(state, territory):
+
+    """
+    Recursive function that grabs all territories of ours that are touching another one of our territories in a link.
+    Example if we have 3 territories bordering each other, you pass this one of those territories and it returns an
+    array of all 3 of those territories.
+
+    :param state: RiskState
+    :param territory: RiskTerritory
+    :return: RiskTerritory[]
+    """
+
+    region = [territory]
+
+    for neighbor in territory.neighbors:
+
+        if isOurTerritory(state, state.board.territories[neighbor] ):
+
+            # Add all friendly neighbors
+            region += grab_region(state, state.board.territories[neighbor])
+
+    # Return a set to avoid duplicates.
+    return set(region)
+
+
+
+
 # Stuff below this is just to interface with Risk.pyw GUI version
 # DO NOT MODIFY
-
 
 def aiWrapper(function_name, occupying=None):
     game_board = createRiskBoard()

@@ -51,6 +51,7 @@ def heuristic(state):
     h = 1000
     for t in state.board.territories:
         h -= evalTerritory(state, t)
+       
 
     return h
 
@@ -84,9 +85,10 @@ def evalTerritory(state, territoryID):
     """
 
     # figure out importance of continent..
-    territory = state.board.territories[territoryID]
+    territory = state.board.territories[territoryID.id]
 
     # Figure out how many neighbors it has that are not our territories, and the size of their armies.
+    # This is good for Fortifying!!!
 
     # Grab all our neighbors
     neighbors = territory.neighbors
@@ -94,12 +96,18 @@ def evalTerritory(state, territoryID):
     # Go through each neighbor and look at their armies.
     for neighbor in neighbors:
 
-        # if the neighbor is ours the appeal is greater the more armies we have surrounding this territory
-        if TIsMine(state.board.territories[neighbor]):
-            tAppeal += state.armies[neighbor]
-        else:
-            tAppeal -= state.armies[neighbor]
+        if state.board.territories != None:
 
+            # if the neighbor is ours the appeal is greater the more armies we have surrounding this territory
+            if isOurTerritory(state, state.board.territories[neighbor]):
+                tAppeal += state.armies[neighbor]
+            else:
+                tAppeal -= state.armies[neighbor]
+
+    # 2nd Appeal
+    # Prioritizing Attacking Continents Rules
+    # Don't Spread to Thin!
+    # 
 
     # Monopoly check on continent it's contained in.
 
@@ -109,8 +117,17 @@ def evalTerritory(state, territoryID):
     return tAppeal
 
 
+
+
+def isOurTerritory(state, territory):
+    ourID = state.current_player
+
+    if state.owners[territory.id] == ourID:
+        return True
+    return False
 # Stuff below this is just to interface with Risk.pyw GUI version
 # DO NOT MODIFY
+
 
 def aiWrapper(function_name, occupying=None):
     game_board = createRiskBoard()

@@ -43,6 +43,7 @@ def getAction(state, time_left=None):
             best_action = a
             best_action_value = current_action_value
 
+    """
     our_t = 0
     opp_t = 0
     for t in state.board.territories:
@@ -52,9 +53,11 @@ def getAction(state, time_left=None):
         if is_their_territory(state, t, state.current_player):
             opp_t += 1
 
+
     #print("H:" + str(our_t) + "|O:" + str(opp_t))
     #print(best_action.description(), best_action_value )
     #print
+    """
 
     # Return the best action
     return best_action
@@ -96,6 +99,8 @@ def attack_heuristic(state, opid):
 
     h = 0
 
+    # h = pre_place_heuristic(state, opid)
+
     for t in state.board.territories:
 
         if is_our_territory(state, t, opid):
@@ -120,13 +125,15 @@ def attack_heuristic(state, opid):
 
 def pre_place_heuristic(state, opid):
     """
-    Place armies on territories that border enemies.
+    Prioritize armies on territories that border enemies.
 
     :param state: RiskState
     :return:
     """
 
     h = 0
+
+    chokeholds = grab_chokeholds(state, opid)
 
     for t in state.board.territories:
 
@@ -138,8 +145,15 @@ def pre_place_heuristic(state, opid):
                 # If our neighbor is our enemey, then we're doing good putting armies here
                 if is_our_territory(state, id_to_terr(state.board, n), opid) == False:
 
-                    # We want at least 2 armies before we start getting a positive score.
-                    h += -2 + state.armies[t.id]
+                    if t in chokeholds:
+
+                        # We want at least 3 armies before we start getting a positive score.
+                        h += -3 + (state.armies[t.id])
+
+                    else:
+
+                        # We want at least 2 armies before we start getting a positive score.
+                        h += -2 + state.armies[t.id]
 
     return h
 
@@ -357,7 +371,7 @@ def is_their_territory(state, territory, opid):
     return False
 
 
-def grab_chokeholds(state):
+def grab_chokeholds(state, opid):
 
     """
     A choke hold is defined as a friendly territory on the outskirts of a region that touches an enemy territory that
@@ -376,16 +390,16 @@ def grab_chokeholds(state):
     # Go through all territories on board
     for territory in state.board.territories:
 
-        # If this terriroty is an enemy territory.
-        if is_our_territory(state, territory) == False:
+        # If this terriroty is out territory.
+        if is_our_territory(state, territory, opid) == False:
 
             our_territories_it_touches = []
 
             for neighbor in territory.neighbors:
 
-                if is_our_territory(state, state.board.territories[neighbor] ):
+                if is_our_territory(state, state.board.territories[neighbor], opid):
 
-                    our_territories_it_touches.append( state.board.territories[neighbor] )
+                    our_territories_it_touches.append(state.board.territories[neighbor])
 
             if len(our_territories_it_touches) == 1:
                 chokeholds += our_territories_it_touches

@@ -1,6 +1,7 @@
 import riskengine
 import riskgui
 import random
+import math
 from aihelper import *
 from risktools import *
 from turbohelper import *
@@ -12,6 +13,9 @@ def getAction(state, time_left=None):
 
     # if time_left is not None:
     # Decide how much time to spend on this decision
+
+    if state.turn_type == 'PreAssign':
+        return preAssign(state)
 
     # Get the possible actions in this state
     actions = getAllowedActions(state)
@@ -49,17 +53,121 @@ def getAction(state, time_left=None):
     for t in state.board.territories:
         if is_our_territory(state, t, state.current_player):
             our_t += 1
-
         if is_their_territory(state, t, state.current_player):
             opp_t += 1
-
-
     #print("H:" + str(our_t) + "|O:" + str(opp_t))
     #print(best_action.description(), best_action_value )
     #print
     """
 
     # Return the best action
+    return best_action
+
+
+def preAssign(state):
+
+    best_action = None
+    best_action_value = None
+    actions = getPreAssignActions(state)
+
+
+    if state.players[state.current_player].free_armies >= 30:
+        for a in actions:
+        
+            if str(a.to_territory) == "Laos":
+                action_value = 7
+
+            elif str(a.to_territory) == "Brazil":
+                action_value = 6
+
+            elif str(a.to_territory) == "Chile":
+                action_value = 5
+         
+            elif str(a.to_territory) == "Iceland":
+                action_value = 4
+          
+            elif str(a.to_territory)== "Alaska":
+                action_value = 3
+           
+            elif str(a.to_territory) == "Eastern Australia":
+                action_value = 2
+         
+            elif str(a.to_territory) == "Greenland":
+                action_value = 1
+
+            else:
+                action_value = 0
+
+            monopoly_action = checkMonopoly(state, a.to_territory)
+            if monopoly_action > 0:
+                action_value = monopoly_action
+            
+            if best_action_value is None or action_value > best_action_value:
+                best_action = a
+                best_action_value = action_value
+                #print "Update Action: ", best_action_value         
+
+    elif state.players[state.current_player].free_armies > 22:
+        for a in actions:
+            
+            if str(a.to_territory)== "Alaska":
+                action_value = 10
+         
+            elif str(a.to_territory) == "Eastern Australia":
+                action_value = 9
+           
+            elif str(a.to_territory) == "Mexico":
+                action_value = 8
+        
+            elif str(a.to_territory) == "Western Africa":
+                action_value = 7
+             
+            elif str(a.to_territory) == "Western Austrialia":
+                action_value = 6
+             
+            elif str(a.to_territory) == "Columbia":
+                action_value = 5
+              
+            elif str(a.to_territory) == "Madagascar":
+                action_value = 4
+               
+            elif str(a.to_territory) == "Indonesia":
+                action_value = 3
+          
+            elif str(a.to_territory) == "South Africa":
+                action_value = 2
+            
+            elif str(a.to_territory) == "Kamchatka":
+                action_value = 1
+                   
+            else:
+                action_value = 0
+
+            monopoly_action = checkMonopoly(state, a.to_territory)
+            if monopoly_action > 0:
+                action_value = monopoly_action
+          
+            if best_action_value is None or action_value > best_action_value:
+                best_action = a
+                best_action_value = action_value
+                #print "Update Action: ", best_action_value
+                
+        #print "Best Action: ", best_action.to_territory
+    else:
+        bestPer = 0.0
+        for a in actions:
+            terrPer = checkPercentage(state, a.to_territory)
+            monopoly_action = checkMonopoly(state, a.to_territory)
+            if monopoly_action > 0:
+                terrPer = monopoly_action
+
+            if bestPer == 0.0 or terrPer > bestPer:
+                best_action = a
+                bestPer= terrPer  
+
+        #print "Best Action: ", best_action.to_territory
+        #print "Best Action Value: ", bestPer
+
     return best_action
 
 
@@ -113,12 +221,12 @@ def attack_heuristic(state, opid):
     # Determine any continent bonuses we deserve
     for c in state.board.continents:
         if is_our_continent(state, state.board.continents[c], opid):
-            h += 50
+            h += 100
 
     # Determine any continent bonuses the opponent is receiving
     for c in state.board.continents:
         if is_their_continent(state, state.board.continents[c], opid):
-            h -= 100
+            h -= 50
 
     return h
 
@@ -126,7 +234,6 @@ def attack_heuristic(state, opid):
 def pre_place_heuristic(state, opid):
     """
     Prioritize armies on territories that border enemies.
-
     :param state: RiskState
     :return:
     """
@@ -146,14 +253,10 @@ def pre_place_heuristic(state, opid):
                 if is_our_territory(state, id_to_terr(state.board, n), opid) == False:
 
                     if t in chokeholds:
-
-                        # We want at least 3 armies before we start getting a positive score.
-                        h += -3 + (state.armies[t.id])
+                        h += -2 + ((state.armies[t.id]*2.0)**(1/3.0))
 
                     else:
-
-                        # We want at least 2 armies before we start getting a positive score.
-                        h += -2 + state.armies[t.id]
+                        h += -2 + math.sqrt(state.armies[t.id])
 
     return h
 
@@ -169,7 +272,6 @@ def pre_assign_heuristic(state, opid):
 
     """
     Here we cut out any monopolies the enemy might get by counter picking.
-
     :param state: RiskState
     :return:
     """
@@ -244,7 +346,6 @@ def territories_are_neighbors(board, t_id1, t_id2):
 
     """
     Determines whether or not two territories are neighbors to each other
-
     :param board: RiskBoard
     :param t_id1: int
     :param t_id2: int
@@ -263,7 +364,6 @@ def territories_are_neighbors(board, t_id1, t_id2):
 def is_our_continent(state, continent, opid):
 
     """
-
     :param state: RiskState
     :param continent: RiskContinent
     :return: boolean
@@ -294,7 +394,6 @@ def eval_territory(state, territory):
     This ranks territories on how important they are to the AI
     If this is our territory we want to protect it.
     If this is an enemies territory we want to claim it.
-
     :type state: RiskState
     :type territory: int
     """
@@ -351,7 +450,6 @@ def is_our_territory(state, territory, opid):
     """
     Determines whether or not the territory passed in belongs to our AI given the current state of things.
     Assumes that state is in opponents phase
-
     :param state: RiskState
     :param territory: RiskTerritory
     :return: boolean
@@ -376,9 +474,7 @@ def grab_chokeholds(state, opid):
     """
     A choke hold is defined as a friendly territory on the outskirts of a region that touches an enemy territory that
     no other territory of that region touches.
-
     These are essential for reinforcement to prevent region from being broken into.
-
     :param state: RiskState
     :return: RiskTerritory[]
     """
@@ -411,7 +507,6 @@ def grab_regions(state, opid):
 
     """
     Goes through and finds clusters of territories.
-
     :param state: RiskState
     :return: RiskTerritory[][]
     """
@@ -450,7 +545,6 @@ def grab_region(state, territory, already_found, opid):
     Recursive function that grabs all territories of ours that are touching another one of our territories in a link.
     Example if we have 3 territories bordering each other, you pass this one of those territories and it returns an
     array of all 3 of those territories.
-
     :param state: RiskState
     :param territory: RiskTerritory
     :param already_found: RiskTerritory[]
@@ -479,6 +573,71 @@ def grab_region(state, territory, already_found, opid):
     # Return a set to avoid duplicates.
     return list(set(region))
 
+
+def checkPercentage(state, territory):
+    iOwn = 0
+    tOwn = 0
+    uOwn = 0
+    total = 0
+    iPer = 0.0
+    tPer = 0.0
+    uPer = 0.0
+    totalPer = 0.0
+
+    for c in state.board.continents:
+        for t in state.board.continents[c].territories:
+            if territory == state.board.territories[t].name:
+                continent = c
+ 
+    for t in state.board.continents[continent].territories:
+        if is_our_territory(state, state.board.territories[t],state.current_player):
+            iOwn += 1
+        elif is_their_territory(state, state.board.territories[t], state.current_player):
+            tOwn += 1 
+        else:
+            uOwn += 1
+
+    num = iOwn + tOwn + uOwn
+    if iOwn == num:
+        return 0
+    subtotal = iOwn + (num - tOwn) + (num - uOwn)  
+    total = subtotal * 10
+    totalPer = total / num
+    return totalPer
+
+
+def checkMonopoly(state, territory): 
+
+    Owned = 0
+    Appeal = 0
+    notOwned = 0
+    theyOwn = 0
+    continent = None
+
+    for c in state.board.continents:
+        
+        for t in state.board.continents[c].territories:
+            if territory == state.board.territories[t].name:
+                continent = c
+    
+    for t in state.board.continents[continent].territories:
+        if is_our_territory(state,state.board.territories[t], state.current_player):
+            Owned += 1
+         
+        elif is_their_territory(state, state.board.territories[t],state.current_player):
+            theyOwn += 1
+       
+        else:
+            notOwned += 1
+        
+    if len(state.board.continents[continent].territories) == (Owned + 1) or len(state.board.continents[continent].territories) == (theyOwn + 1) or len(state.board.continents[continent].territories) == (theyOwn + Owned + 1):
+        Appeal += 50 
+    if len(state.board.continents[continent].territories) == (Owned + 2):
+        Appeal += 25
+    if (len(state.board.continents[continent].territories) == theyOwn):
+        Appeal += 200    
+
+    return Appeal
 
 
 
